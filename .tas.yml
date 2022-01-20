@@ -1,15 +1,14 @@
-framework: mocha      # Mention the testing framework mocha, jest or jasmine.
+framework: mocha      
 preRun:
   command:
-    - npm install
-    - npm run build
+    - npm ci
 postMerge:
   pattern:
-    - "./test.js" # Glob pattern to path where tests that should run post-merge are written.
+    - "./test.js"
 preMerge:
   pattern:
-    - "./test.js" 
+    - "./test.js"
 postRun:
   command:
-    - node --version # Mention post-run steps here
+    - node --version
 version: 1.0
