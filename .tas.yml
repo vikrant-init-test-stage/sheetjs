@@ -1,14 +1,15 @@
-framework: mocha      
+---
+framework: mocha
 preRun:
-  command:
-    - npm ci
-postMerge:
-  pattern:
-    - "./test.js"
+     command:
+        - npm install
 preMerge:
   pattern:
     - "./test.js"
+postMerge:
+  pattern: 
+    - "./test.js"
 postRun:
-  command:
-    - node --version
+     command:
+        - node --version
 version: 1.0
