@@ -2,7 +2,8 @@
 framework: mocha
 preRun:
      command:
-        - npm ci
+        - npm install
+        - npm run pretest
 preMerge:
   pattern:
     - "test.js"
