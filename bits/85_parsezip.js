@@ -60,7 +60,16 @@ function parse_zip(zip/*:ZIP*/, opts/*:?ParseOpts*/)/*:Workbook*/ {
 	/* UOC */
 	if(safegetzipfile(zip, 'objectdata.xml')) return parse_ods(zip, opts);
 	/* Numbers */
-	if(safegetzipfile(zip, 'Index/Document.iwa')) throw new Error('Unsupported NUMBERS file');
+	if(safegetzipfile(zip, 'Index/Document.iwa')) {
+		if(typeof Uint8Array == "undefined") throw new Error('NUMBERS file parsing requires Uint8Array support');
+		if(typeof NUMBERS != "undefined") {
+			if(zip.FileIndex) return NUMBERS.parse_numbers(zip);
+			var _zip = CFB.utils.cfb_new();
+			zipentries(zip).forEach(function(e) { zip_add_file(_zip, e, getzipbin(zip, e)); });
+			return NUMBERS.parse_numbers(_zip);
+		}
+		throw new Error('Unsupported NUMBERS file');
+	}
 	if(!safegetzipfile(zip, '[Content_Types].xml')) {
 		if(safegetzipfile(zip, 'index.xml.gz')) throw new Error('Unsupported NUMBERS 08 file');
 		if(safegetzipfile(zip, 'index.xml')) throw new Error('Unsupported NUMBERS 09 file');
@@ -152,8 +161,15 @@ function parse_zip(zip/*:ZIP*/, opts/*:?ParseOpts*/)/*:Workbook*/ {
 	var wbrelsi = dir.workbooks[0].lastIndexOf("/");
 	var wbrelsfile = (dir.workbooks[0].slice(0, wbrelsi+1) + "_rels/" + dir.workbooks[0].slice(wbrelsi+1) + ".rels").replace(/^\//,"");
 	if(!safegetzipfile(zip, wbrelsfile)) wbrelsfile = 'xl/_rels/workbook.' + wbext + '.rels';
-	var wbrels = parse_rels(getzipstr(zip, wbrelsfile, true), wbrelsfile);
+	var wbrels = parse_rels(getzipstr(zip, wbrelsfile, true), wbrelsfile.replace(/_rels.*/, "s5s"));
+
+	if((dir.metadata || []).length >= 1) {
+		/* TODO: MDX and other types of metadata */
+		opts.xlmeta = parse_xlmeta(getzipdata(zip, strip_front_slash(dir.metadata[0])),dir.metadata[0],opts);
+	}
+
 	if(wbrels) wbrels = safe_parse_wbrels(wbrels, wb.Sheets);
+
 
 	/* Numbers iOS hack */
 	var nmode = (getzipdata(zip,"xl/worksheets/sheet.xml",true))?1:0;

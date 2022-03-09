@@ -9,7 +9,10 @@ export {
 	writeFileSync as writeFile,
 	writeFileSync,
 	writeFileAsync,
+	writeSyncXLSX as writeXLSX,
+	writeFileSyncXLSX as writeFileXLSX,
 	utils,
+	__stream as stream,
 	SSF,
 	CFB
 };

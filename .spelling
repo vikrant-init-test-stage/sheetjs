@@ -1,5 +1,6 @@
 # xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com
 SheetJS
+sheetjs
 js-xlsx
 xls
 xlsb
@@ -15,6 +16,7 @@ OData
 OpenDocument
 OpenFormula
 PivotTable
+PivotTables
 Quattro
 SpreadsheetML
 Unhide
@@ -34,11 +36,13 @@ tooltips
 Browserify
 CDNjs
 CommonJS
+Deno
 Ethercalc
 ExtendScript
 IndexedDB
 JavaScriptCore
 LocalStorage
+NestJS
 NPM
 Nuxt.js
 Redis
@@ -48,9 +52,11 @@ SessionStorage
 SQLite
 SystemJS
 VueJS
+WebKit
 WebSQL
 WK_
 iOS
+iWork
 nodejs
 node.js
 npm
@@ -95,12 +101,14 @@ encodings
 filesystem
 globals
 javascript
+lifecycle
 metadata
 natively
 pre-built
 pre-generated
 prepend
 prepended
+programmatically
 repo
 runtime
 serverless
@@ -144,6 +152,7 @@ storages
 
  - demos/extendscript/README.md
 Photoshop
+InDesign
 minifier
 
  - demos/function/README.md

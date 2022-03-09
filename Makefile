@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 LIB=xlsx
 FMT=xlsx xlsm xlsb ods xls xml misc full
-REQS=jszip.js
+REQS=
 ADDONS=dist/cpexcel.js
 AUXTARGETS=
 CMDS=bin/xlsx.njs
@@ -11,14 +11,14 @@ MINITGT=xlsx.mini.js
 MINIFLOW=xlsx.mini.flow.js
 MINIDEPS=$(shell cat mini.lst)
 
-NODESMTGT=xlsx.esm.mjs
-NODESMDEPS=$(shell cat misc/esm.lst)
 ESMJSTGT=xlsx.mjs
 ESMJSDEPS=$(shell cat misc/mjs.lst)
 
 
 ULIB=$(shell echo $(LIB) | tr a-z A-Z)
 DEPS=$(sort $(wildcard bits/*.js))
+TSBITS=$(patsubst modules/%,bits/%,$(wildcard modules/[0-9][0-9]_*.js))
+MTSBITS=$(patsubst modules/%,misc/%,$(wildcard modules/[0-9][0-9]_*.js))
 TARGET=$(LIB).js
 FLOWTARGET=$(LIB).flow.js
 FLOWAUX=$(patsubst %.js,%.flow.js,$(AUXTARGETS))
@@ -30,7 +30,7 @@ CLOSURE=/usr/local/lib/node_modules/google-closure-compiler/compiler.jar
 ## Main Targets
 
 .PHONY: all
-all: $(TARGET) $(AUXTARGETS) $(AUXSCPTS) $(MINITGT) $(NODESMTGT) $(ESMJSTGT) ## Build library and auxiliary scripts
+all: $(TARGET) $(AUXTARGETS) $(AUXSCPTS) $(MINITGT) $(ESMJSTGT) ## Build library and auxiliary scripts
 
 $(FLOWTGTS): %.js : %.flow.js
 	node -e 'process.stdout.write(require("fs").readFileSync("$<","utf8").replace(/^[ \t]*\/\*[:#][^*]*\*\/\s*(\n)?/gm,"").replace(/\/\*[:#][^*]*\*\//gm,""))' > $@
@@ -41,9 +41,6 @@ $(FLOWTARGET): $(DEPS)
 $(MINIFLOW): $(MINIDEPS)
 	cat $^ | tr -d '\15\32' > $@
 
-$(NODESMTGT): $(NODESMDEPS)
-	cat $^ | tr -d '\15\32' > $@
-
 $(ESMJSTGT): $(ESMJSDEPS)
 	cat $^ | tr -d '\15\32' > $@
 
@@ -52,6 +49,13 @@ bits/01_version.js: package.json
 
 bits/18_cfb.js: node_modules/cfb/xlscfb.flow.js
 	cp $^ $@
+
+$(TSBITS): bits/%: modules/%
+	cp $^ $@
+
+$(MTSBITS): misc/%: modules/%
+	cp $^ $@
+
 
 .PHONY: clean
 clean: ## Remove targets and build artifacts
@@ -73,32 +77,40 @@ DISTHDR=misc/suppress_export.js
 .PHONY: dist
 dist: dist-deps $(TARGET) bower.json ## Prepare JS files for distribution
 	mkdir -p dist
-	<$(TARGET) sed "s/require('....*')/undefined/g" > dist/$(TARGET)
 	cp LICENSE dist/
 	uglifyjs shim.js $(UGLIFYOPTS) -o dist/shim.min.js --preamble "$$(head -n 1 bits/00_header.js)"
-	uglifyjs $(DISTHDR) dist/$(TARGET) $(UGLIFYOPTS) -o dist/$(LIB).min.js --source-map dist/$(LIB).min.map --preamble "$$(head -n 1 bits/00_header.js)"
-	misc/strip_sourcemap.sh dist/$(LIB).min.js
-	uglifyjs $(DISTHDR) $(REQS) dist/$(TARGET) $(UGLIFYOPTS) -o dist/$(LIB).core.min.js --source-map dist/$(LIB).core.min.map --preamble "$$(head -n 1 bits/00_header.js)"
+	@#
+	<$(TARGET) sed "s/require('.*')/undefined/g;s/ process / undefined /g;s/process.versions/({})/g" > dist/$(TARGET)
+	<$(MINITGT) sed "s/require('.*')/undefined/g;s/ process / undefined /g;s/process.versions/({})/g" > dist/$(MINITGT)
+	@# core
+	uglifyjs $(REQS) dist/$(TARGET) $(UGLIFYOPTS) -o dist/$(LIB).core.min.js --source-map dist/$(LIB).core.min.map --preamble "$$(head -n 1 bits/00_header.js)"
 	misc/strip_sourcemap.sh dist/$(LIB).core.min.js
+	@# full
+	#cat <(head -n 1 bits/00_header.js) $(DISTHDR) $(REQS) $(ADDONS) dist/$(TARGET) $(AUXTARGETS) > dist/$(LIB).full.js
 	uglifyjs $(DISTHDR) $(REQS) $(ADDONS) dist/$(TARGET) $(AUXTARGETS) $(UGLIFYOPTS) -o dist/$(LIB).full.min.js --source-map dist/$(LIB).full.min.map --preamble "$$(head -n 1 bits/00_header.js)"
-	uglifyjs $(DISTHDR) $(MINITGT) $(UGLIFYOPTS) -o dist/$(LIB).mini.min.js --source-map dist/$(LIB).mini.min.map --preamble "$$(head -n 1 bits/00_header.js)"
 	misc/strip_sourcemap.sh dist/$(LIB).full.min.js
+	@# mini
+	uglifyjs dist/$(MINITGT) $(UGLIFYOPTS) -o dist/$(LIB).mini.min.js --source-map dist/$(LIB).mini.min.map --preamble "$$(head -n 1 bits/00_header.js)"
 	misc/strip_sourcemap.sh dist/$(LIB).mini.min.js
+	@# extendscript
 	cat <(head -n 1 bits/00_header.js) shim.js $(DISTHDR) $(REQS) dist/$(TARGET) > dist/$(LIB).extendscript.js
+	@#
+	rm dist/$(TARGET) dist/$(MINITGT)
 
 .PHONY: dist-deps
 dist-deps: ## Copy dependencies for distribution
 	mkdir -p dist
 	cp node_modules/codepage/dist/cpexcel.full.js dist/cpexcel.js
-	cp jszip.js dist/jszip.js
 
 .PHONY: aux
 aux: $(AUXTARGETS)
 
-BYTEFILE=dist/xlsx.min.js dist/xlsx.{core,full,mini}.min.js dist/xlsx.extendscript.js
+BYTEFILEC=dist/xlsx.{full,core,mini}.min.js
+BYTEFILER=dist/xlsx.extendscript.js xlsx.mjs
 .PHONY: bytes
 bytes: ## Display minified and gzipped file sizes
-	for i in $(BYTEFILE); do printj "%-30s %7d %10d" $$i $$(wc -c < $$i) $$(gzip --best --stdout $$i | wc -c); done
+	@for i in $(BYTEFILEC); do printj "%-30s %7d %10d" $$i $$(wc -c < $$i) $$(gzip --best --stdout $$i | wc -c); done
+	@for i in $(BYTEFILER); do printj "%-30s %7d" $$i $$(wc -c < $$i); done
 
 .PHONY: graph
 graph: formats.png legend.png ## Rebuild format conversion graph
@@ -129,12 +141,30 @@ pkg: bin/xlsx.njs xlsx.js ## Build pkg standalone executable
 test mocha: test.js ## Run test suite
 	mocha -R spec -t 30000
 
+.PHONY: test-esm
+test-esm: test.mjs ## Run Node ESM test suite
+	npx mocha -r esm -R spec -t 30000 $<
+
+.PHONY: test-deno
+test-deno: test.ts ## Run Deno test suite
+	deno test --allow-env --allow-read --allow-write $<
+
 #*                      To run tests for one format, make test_<fmt>
 #*                      To run the core test suite, make test_misc
 TESTFMT=$(patsubst %,test_%,$(FMT))
 .PHONY: $(TESTFMT)
 $(TESTFMT): test_%:
 	FMTS=$* make test
+
+TESTESMFMT=$(patsubst %,test-esm_%,$(FMT))
+.PHONY: $(TESTESMFMT)
+$(TESTESMFMT): test-esm_%:
+	FMTS=$* make test-esm
+
+TESTDENOFMT=$(patsubst %,test-deno_%,$(FMT))
+.PHONY: $(TESTESMFMT)
+$(TESTDENOFMT): test-deno_%:
+	FMTS=$* make test-deno
 
 .PHONY: travis
 travis: ## Run test suite with minimal output

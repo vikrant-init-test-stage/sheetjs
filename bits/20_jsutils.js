@@ -101,10 +101,18 @@ function parseDate(str/*:string|Date*/, fixdate/*:?number*/)/*:Date*/ {
 	return out;
 }
 
-function cc2str(arr/*:Array<number>*/)/*:string*/ {
-	var o = "";
-	for(var i = 0; i != arr.length; ++i) o += String.fromCharCode(arr[i]);
-	return o;
+function cc2str(arr/*:Array<number>*/, debomit)/*:string*/ {
+	if(has_buf && Buffer.isBuffer(arr)) {
+		if(debomit) {
+			if(arr[0] == 0xFF && arr[1] == 0xFE) return arr.slice(2).toString("utf16le");
+			if(arr[1] == 0xFE && arr[2] == 0xFF) return utf16beread(arr.slice(2).toString("binary"));
+		}
+		return arr.toString("binary");
+	}
+	/* TODO: investigate performance degradation of TextEncoder in Edge 13 */
+	var o = [];
+	for(var i = 0; i != arr.length; ++i) o.push(String.fromCharCode(arr[i]));
+	return o.join("");
 }
 
 function dup(o/*:any*/)/*:any*/ {
@@ -131,13 +139,18 @@ function fuzzynum(s/*:string*/)/*:number*/ {
 	if(!isNaN(v = Number(ss))) return v / wt;
 	return v;
 }
+var lower_months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 function fuzzydate(s/*:string*/)/*:Date*/ {
 	var o = new Date(s), n = new Date(NaN);
 	var y = o.getYear(), m = o.getMonth(), d = o.getDate();
 	if(isNaN(d)) return n;
+	var lower = s.toLowerCase();
+	if(lower.match(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/)) {
+		lower = lower.replace(/[^a-z]/g,"").replace(/([^a-z]|^)[ap]m?([^a-z]|$)/,"");
+		if(lower.length > 3 && lower_months.indexOf(lower) == -1) return n;
+	} else if(lower.match(/[a-z]/)) return n;
 	if(y < 0 || y > 8099) return n;
 	if((m > 0 || d > 1) && y != 101) return o;
-	if(s.toLowerCase().match(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/)) return o;
 	if(s.match(/[^-0-9:,\/\\]/)) return n;
 	return o;
 }

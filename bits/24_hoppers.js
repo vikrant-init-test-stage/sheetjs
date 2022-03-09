@@ -44,7 +44,7 @@ function buf_array()/*:BufArray*/ {
 
 	var end = function ba_end() {
 		endbuf();
-		return __toBuffer([bufs]);
+		return bconcat(bufs);
 	};
 
 	var push = function ba_push(buf) { endbuf(); curbuf = buf; if(curbuf.l == null) curbuf.l = curbuf.length; next(blksz); };
@@ -53,6 +53,7 @@ function buf_array()/*:BufArray*/ {
 }
 
 function write_record(ba/*:BufArray*/, type/*:string*/, payload, length/*:?number*/) {
+	if(!XLSBRE) make_XLSBRE();
 	var t/*:number*/ = +XLSBRE[type], l;
 	if(isNaN(t)) return; // TODO: throw something here?
 	if(!length) length = XLSBRecordEnum[t].p || (payload||[]).length || 0;

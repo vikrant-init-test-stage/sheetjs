@@ -1,3 +1,26 @@
+function write_obj_str(factory/*:WriteObjStrFactory*/) {
+	return function write_str(wb/*:Workbook*/, o/*:WriteOpts*/)/*:string*/ {
+		var idx = 0;
+		if(o.sheet) {
+			if(typeof o.sheet == "number") idx = o.sheet;
+			else idx = wb.SheetNames.indexOf(o.sheet);
+			if(!wb.SheetNames[idx]) throw new Error("Sheet not found: " + o.sheet + " : " + (typeof o.sheet));
+		}
+		return factory.from_sheet(wb.Sheets[wb.SheetNames[idx]], o, wb);
+	};
+}
+
+var write_htm_str = write_obj_str(HTML_);
+var write_csv_str = write_obj_str({from_sheet:sheet_to_csv});
+var write_slk_str = write_obj_str(typeof SYLK !== "undefined" ? SYLK : {});
+var write_dif_str = write_obj_str(typeof DIF !== "undefined" ? DIF : {});
+var write_prn_str = write_obj_str(typeof PRN !== "undefined" ? PRN : {});
+var write_rtf_str = write_obj_str(typeof RTF !== "undefined" ? RTF : {});
+var write_txt_str = write_obj_str({from_sheet:sheet_to_txt});
+var write_dbf_buf = write_obj_str(typeof DBF !== "undefined" ? DBF : {});
+var write_eth_str = write_obj_str(typeof ETH !== "undefined" ? ETH : {});
+var write_wk1_buf = write_obj_str(typeof WK_ !== "undefined" ? {from_sheet:WK_.sheet_to_wk1} : {});
+
 function write_cfb_ctr(cfb/*:CFBContainer*/, o/*:WriteOpts*/)/*:any*/ {
 	switch(o.type) {
 		case "base64": case "binary": break;
@@ -13,18 +36,33 @@ function write_cfb_ctr(cfb/*:CFBContainer*/, o/*:WriteOpts*/)/*:any*/ {
 function write_zip_type(wb/*:Workbook*/, opts/*:?WriteOpts*/)/*:any*/ {
 	var o = dup(opts||{});
 	var z = write_zip(wb, o);
+	return write_zip_denouement(z, o);
+}
+function write_zip_typeXLSX(wb/*:Workbook*/, opts/*:?WriteOpts*/)/*:any*/ {
+	var o = dup(opts||{});
+	var z = write_zip_xlsx(wb, o);
+	return write_zip_denouement(z, o);
+}
+function write_zip_denouement(z/*:any*/, o/*:?WriteOpts*/)/*:any*/ {
 	var oopts = {};
+	var ftype = has_buf ? "nodebuffer" : (typeof Uint8Array !== "undefined" ? "array" : "string");
 	if(o.compression) oopts.compression = 'DEFLATE';
-	if(o.password) oopts.type = has_buf ? "nodebuffer" : "string";
+	if(o.password) oopts.type = ftype;
 	else switch(o.type) {
 		case "base64": oopts.type = "base64"; break;
 		case "binary": oopts.type = "string"; break;
 		case "string": throw new Error("'string' output type invalid for '" + o.bookType + "' files");
 		case "buffer":
-		case "file": oopts.type = has_buf ? "nodebuffer" : "string"; break;
+		case "file": oopts.type = ftype; break;
 		default: throw new Error("Unrecognized type " + o.type);
 	}
-	var out = z.FullPaths ? CFB.write(z, {fileType:"zip", type: /*::(*/{"nodebuffer": "buffer", "string": "binary"}/*:: :any)*/[oopts.type] || oopts.type}) : z.generate(oopts);
+	var out = z.FullPaths ? CFB.write(z, {fileType:"zip", type: /*::(*/{"nodebuffer": "buffer", "string": "binary"}/*:: :any)*/[oopts.type] || oopts.type, compression: !!o.compression}) : z.generate(oopts);
+	if(typeof Deno !== "undefined") {
+		if(typeof out == "string") {
+			if(o.type == "binary" || o.type == "base64") return out;
+			out = new Uint8Array(s2ab(out));
+		}
+	}
 /*jshint -W083 */
 	if(o.password && typeof encrypt_agile !== 'undefined') return write_cfb_ctr(encrypt_agile(out, o.password), o); // eslint-disable-line no-undef
 /*jshint +W083 */
@@ -48,6 +86,7 @@ function write_string_type(out/*:string*/, opts/*:WriteOpts*/, bom/*:?string*/)/
 		case "file": return write_dl(opts.file, o, 'utf8');
 		case "buffer": {
 			if(has_buf) return Buffer_from(o, 'utf8');
+			else if(typeof TextEncoder !== "undefined") return new TextEncoder().encode(o);
 			else return write_string_type(o, {type:'binary'}).split("").map(function(c) { return c.charCodeAt(0); });
 		}
 	}
@@ -82,6 +121,15 @@ function write_binary_type(out, opts/*:WriteOpts*/)/*:any*/ {
 		case "buffer": return out;
 		default: throw new Error("Unrecognized type " + opts.type);
 	}
+}
+
+function writeSyncXLSX(wb/*:Workbook*/, opts/*:?WriteOpts*/) {
+	reset_cp();
+	check_wb(wb);
+	var o = dup(opts||{});
+	if(o.cellStyles) { o.cellNF = true; o.sheetStubs = true; }
+	if(o.type == "array") { o.type = "binary"; var out/*:string*/ = (writeSyncXLSX(wb, o)/*:any*/); o.type = "array"; return s2ab(out); }
+	return write_zip_typeXLSX(wb, o);
 }
 
 function writeSync(wb/*:Workbook*/, opts/*:?WriteOpts*/) {
@@ -143,6 +191,14 @@ function writeFileSync(wb/*:Workbook*/, filename/*:string*/, opts/*:?WriteFileOp
 	resolve_book_type(o);
 	return writeSync(wb, o);
 }
+
+function writeFileSyncXLSX(wb/*:Workbook*/, filename/*:string*/, opts/*:?WriteFileOpts*/) {
+	var o = opts||{}; o.type = 'file';
+	o.file = filename;
+	resolve_book_type(o);
+	return writeSyncXLSX(wb, o);
+}
+
 
 function writeFileAsync(filename/*:string*/, wb/*:Workbook*/, opts/*:?WriteFileOpts*/, cb/*:?(e?:ErrnoError)=>void*/) {
 	var o = opts||{}; o.type = 'file';

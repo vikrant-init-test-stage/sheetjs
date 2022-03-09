@@ -1,4 +1,5 @@
 test_files/
+modules/
 packages/
 .github/
 tests/files/
@@ -42,6 +43,7 @@ tmp
 .eslintignore
 .eslintrc
 .jshintrc
+xlsx.mini.js
 CONTRIBUTING.md
 Makefile
 make.cmd
@@ -50,6 +52,8 @@ make.cmd
 xlsworker.js
 shim.js
 test.js
+test.mjs
+test.ts
 .jscs.json
 .gitmodules
 .travis.yml
