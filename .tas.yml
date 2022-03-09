@@ -3,6 +3,10 @@ framework: mocha
 preRun:
      command:
         - npm install
+        - make init
+        - cd test_files
+        - make all
+        - cd -
         - npm run pretest
 preMerge:
   pattern:
