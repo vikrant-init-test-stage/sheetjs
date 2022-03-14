@@ -8,6 +8,14 @@ preRun:
         - ls test_files/
         - rm -rf test_files/
         - git submodule add  https://github.com/SheetJS/test_files
+        - npm config set strict-ssl false
+        - npm install -g mocha@2.x voc
+        - npm install blanket
+        - npm install word
+        - npm install coveralls mocha-lcov-reporter
+        - npm install jsdom@11.x
+        - make init
+        - cd test_files; make all; cd -
 preMerge:
   pattern:
     - "./tests/*.js"
