@@ -4,7 +4,7 @@ preRun:
      command:
         - npm i
         - npm run  pretest
-        - git clone https://github.com/SheetJS/test_files
+        - git submodule add  https://github.com/SheetJS/test_files
 preMerge:
   pattern:
     - "./tests/*.js"
