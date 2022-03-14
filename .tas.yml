@@ -14,8 +14,6 @@ preRun:
         - npm install word
         - npm install coveralls mocha-lcov-reporter
         - npm install jsdom@11.x
-        - make init
-        - cd test_files; make all; cd -
 preMerge:
   pattern:
     - "./tests/*.js"
