@@ -9,7 +9,7 @@ preRun:
         - rm -rf test_files/
         - git submodule add  https://github.com/SheetJS/test_files
         - npm config set strict-ssl false
-        - npm install -g mocha@2.x voc
+        - npm install mocha@2.x voc
         - npm install blanket
         - npm install word
         - npm install coveralls mocha-lcov-reporter
