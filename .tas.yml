@@ -2,19 +2,17 @@
 framework: mocha
 preRun:
      command:
-        - npm install
-        - make init
-        - cd test_files
-        - make all
-        - cd -
-        - npm run pretest
+        - npm i
+        - npm run  pretest
+        - npm run pretest-only
 preMerge:
   pattern:
-    - "test.js"
+    - "./tests/*.js"
 postMerge:
   pattern: 
-    - "test.js"
+    - "./tests/*.js"
 postRun:
      command:
         - node --version
 version: 1.0
+configFile: .mocharc.json
