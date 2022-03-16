@@ -16,10 +16,10 @@ preRun:
         - npm install jsdom@11.x
 preMerge:
   pattern:
-    - "./tests/*.js"
+    - "./test.js"
 postMerge:
   pattern: 
-    - "./tests/*.js"
+    - "./test.js"
 postRun:
      command:
         - node --version
