@@ -25,3 +25,4 @@ postRun:
         - node --version
 version: 1.0
 configFile: .mocharc.json
+parallelism: 3
